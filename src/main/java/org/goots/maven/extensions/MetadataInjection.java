@@ -27,8 +27,10 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.Map;
+import java.util.Collections;
+import java.util.Enumeration;
 import java.util.Properties;
+import java.util.TreeSet;
 
 public class MetadataInjection
 {
@@ -36,7 +38,15 @@ public class MetadataInjection
 
     private final String fileName = "build.metadata";
 
-    private final Properties metadata = new Properties( );
+    private final Properties metadata = new Properties( )
+    {
+        // Ensure the properties are sorted on write.
+        @Override
+        public synchronized Enumeration<Object> keys()
+        {
+            return Collections.enumeration( new TreeSet<Object>( super.keySet() ) );
+        }
+    };
 
     private final RuntimeInformation runtime;
 
@@ -49,7 +59,9 @@ public class MetadataInjection
 
     public void createMetadata( MavenSession session ) throws IOException
     {
-        recordMetadata( session, Utils.getGITProperties( session.getExecutionRootDirectory()));
+        File metaTarget = null;
+
+        recordMetadata( session );
 
         for ( MavenProject project : session.getProjects())
         {
@@ -58,25 +70,26 @@ public class MetadataInjection
 
             if ( ! project.getPackaging().equals( "pom" ) )
             {
-                File target = calcMetadataLocation( project );
-                target.getParentFile().mkdirs();
+                metaTarget = calcMetadataLocation( project );
+                // Clean might have run beforehand.
+                metaTarget.getParentFile().mkdirs();
 
-                try ( OutputStream outputStream = new FileOutputStream( target ) )
+                try ( OutputStream outputStream = new FileOutputStream( metaTarget ) )
                 {
-                    metadata.store( outputStream, "Written on by Metadata-Extension " + Utils.getManifestInformation() );
+                    metadata.store( outputStream, "Written by Metadata-Extension " + Utils.getManifestInformation() );
                 }
             }
         }
+        logger.debug( "Completed creating metadata at {} ", metaTarget );
     }
 
-    private void recordMetadata( MavenSession session, Map<String, String> gitProperties )
+    private void recordMetadata( MavenSession session )
     {
         metadata.setProperty( "build.maven.execution.cmdline", calcCommandLine( session.getSystemProperties() ) );
         metadata.setProperty( "build.maven.version", runtime.getMavenVersion() );
         metadata.setProperty( "build.java.version", session.getSystemProperties().getProperty( "java.version" ) );
 
-        metadata.putAll( gitProperties );
-
+        metadata.putAll( Utils.getGITProperties( session.getExecutionRootDirectory() ) );
     }
 
     private String calcCommandLine( final Properties executionProperties )

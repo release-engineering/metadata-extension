@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
+import java.io.IOException;
 
 @Named
 @Singleton
@@ -34,6 +35,8 @@ public class MetadataEventSpy extends AbstractEventSpy
 
     private final MetadataInjection injector;
 
+    private boolean injectedMetadata;
+
     @Inject
     public MetadataEventSpy(MetadataInjection injector)
     {
@@ -41,7 +44,7 @@ public class MetadataEventSpy extends AbstractEventSpy
     }
 
     @Override
-    public void onEvent( Object event ) throws Exception
+    public void onEvent( Object event )
     {
         if ( isEventSpyDisabled() )
         {
@@ -50,42 +53,42 @@ public class MetadataEventSpy extends AbstractEventSpy
 
         try
         {
-            if ( event instanceof ExecutionEvent )
+            if ( ( ! injectedMetadata ) && event instanceof ExecutionEvent )
             {
                 final ExecutionEvent ee = (ExecutionEvent) event;
                 final ExecutionEvent.Type type = ee.getType();
 
-                // Rather than using SessionStarted or ProjectDiscoveryStarted we will use MojoStarted. This is
-                // because if the user has activated the clean lifecycle that would wipe away any metadata creation.
-                // Therefore we will inject at the start of the validate lifecycle, just after clean is finished.
-                //
-                // Note that ee.getMojoExecution is only valid in the MojoStarted phase.
-                if ( type == ExecutionEvent.Type.MojoStarted )
+                // Ideally we want to use SessionStarted or ProjectDiscoveryStarted but the Project Model has not
+                // been constructed. Anything after that (e.g. ProjectStarted) the Model has been constructed
+                // but the phases might not be available yet. Note that ee.getMojoExecution is only valid after
+                // MojoStarted phase.
+                if ( type != ExecutionEvent.Type.SessionStarted &&
+                            type != ExecutionEvent.Type.ProjectDiscoveryStarted )
                 {
-                    if ( ee.getMojoExecution().getLifecyclePhase().equals( "validate" ) )
+                    if ( ee.getSession() != null && ee.getMojoExecution() != null )
                     {
-                        if ( ee.getSession() != null )
+//                        logger.info( "### Phase is {} and mojo", ee.getMojoExecution().getLifecyclePhase(), ee.getMojoExecution() );
+
+                        if ( ! ee.getMojoExecution().getLifecyclePhase().equals( "clean" ) )
                         {
                             logger.info( "Activating metadata extension" );
                             logger.debug( "Activating metadata extension {} ", Utils.getManifestInformation() );
 
                             injector.createMetadata( ee.getSession() );
-                        }
-                        else
-                        {
-                            logger.error( "Null session ; unable to continue" );
+                            injectedMetadata = true;
                         }
                     }
-
                 }
             }
         }
-        // Catch any runtime exceptions and mark them to fail the build as well.
+        // TODO: Consider failing the build if the extension fails...
+        catch ( final IOException e )
+        {
+            logger.error( "Extension failure", e );
+        }
         catch ( final Throwable e )
         {
-            // TODO: Correctly fail the build if the extension fails...
             logger.error( "Extension failure", e );
-            throw e;
         }
     }
 
