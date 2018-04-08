@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2018 Red Hat, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.commonjava.maven.ext.versioning.test;
+package org.goots.maven.extensions.integrationtest.simplenumeric;
 
 /**
  * Hello world!
