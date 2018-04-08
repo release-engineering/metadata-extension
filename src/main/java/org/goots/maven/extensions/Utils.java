@@ -66,15 +66,11 @@ class Utils
     {
         Map<String, String> map = new TreeMap<>();
 
-        try
+        try ( Repository repository = new FileRepositoryBuilder().readEnvironment()
+                                                               .findGitDir(new File (executionRootDirectory ))
+                                                               .setMustExist( true )
+                                                               .build() )
         {
-            // TODO: Handle closing/cleanup
-            FileRepositoryBuilder builder = new FileRepositoryBuilder();
-            Repository repository = builder.readEnvironment()
-                                           .findGitDir(new File (executionRootDirectory ))
-                                           .setMustExist( true )
-                                           .build();
-
             ObjectId head = repository.resolve( "HEAD" );
             if ( head == null )
             {
