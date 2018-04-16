@@ -59,28 +59,25 @@ public class MetadataInjection
 
     public void createMetadata( MavenSession session ) throws IOException
     {
-        File metaTarget = null;
-
         recordMetadata( session );
 
-        for ( MavenProject project : session.getProjects())
+        MavenProject project = session.getCurrentProject();
+
+        logger.debug( "Running metadata extension for {} with base dir {} packaging {} and final name {}", project.getId(),
+                      project.getBasedir(), project.getPackaging(), project.getBuild().getFinalName() );
+
+        if ( !project.getPackaging().equals( "pom" ) )
         {
-            logger.debug ("Examining {} with base dir {} packaging {} and final name {}", project.getId(),
-                         project.getBasedir(), project.getPackaging() , project.getBuild().getFinalName() );
+            File metaTarget = calcMetadataLocation( project );
+            // Clean might have run beforehand.
+            metaTarget.getParentFile().mkdirs();
 
-            if ( ! project.getPackaging().equals( "pom" ) )
+            try (OutputStream outputStream = new FileOutputStream( metaTarget ))
             {
-                metaTarget = calcMetadataLocation( project );
-                // Clean might have run beforehand.
-                metaTarget.getParentFile().mkdirs();
-
-                try ( OutputStream outputStream = new FileOutputStream( metaTarget ) )
-                {
-                    metadata.store( outputStream, "Written by Metadata-Extension " + Utils.getManifestInformation() );
-                }
+                metadata.store( outputStream, "Written by Metadata-Extension " + Utils.getManifestInformation() );
             }
+            logger.debug( "Completed creating metadata at {} ", metaTarget );
         }
-        logger.debug( "Completed creating metadata at {} ", metaTarget );
     }
 
     private void recordMetadata( MavenSession session )
@@ -139,6 +136,7 @@ public class MetadataInjection
                 break;
             }
         }
+        logger.debug( "For packaging type {} using meta-target location of {} ", project.getPackaging(), result );
         return result;
     }
 }

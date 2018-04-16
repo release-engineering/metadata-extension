@@ -17,6 +17,7 @@ package org.goots.maven.extensions;
 
 import org.apache.maven.eventspy.AbstractEventSpy;
 import org.apache.maven.execution.ExecutionEvent;
+import org.apache.maven.project.MavenProject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,6 +25,8 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.HashSet;
 
 @Named
 @Singleton
@@ -35,7 +38,7 @@ public class MetadataEventSpy extends AbstractEventSpy
 
     private final MetadataInjection injector;
 
-    private boolean injectedMetadata;
+    private final HashSet<MavenProject> injected = new HashSet<>( );
 
     @Inject
     public MetadataEventSpy(MetadataInjection injector)
@@ -53,7 +56,8 @@ public class MetadataEventSpy extends AbstractEventSpy
 
         try
         {
-            if ( ( ! injectedMetadata ) && event instanceof ExecutionEvent )
+
+            if ( event instanceof ExecutionEvent )
             {
                 final ExecutionEvent ee = (ExecutionEvent) event;
                 final ExecutionEvent.Type type = ee.getType();
@@ -65,9 +69,9 @@ public class MetadataEventSpy extends AbstractEventSpy
                 if ( type != ExecutionEvent.Type.SessionStarted &&
                             type != ExecutionEvent.Type.ProjectDiscoveryStarted )
                 {
-                    if ( ee.getSession() != null && ee.getMojoExecution() != null )
+                    if ( ee.getSession() != null && ee.getMojoExecution() != null && !injected.contains( ee.getProject() ) )
                     {
-//                        logger.info( "### Phase is {} and mojo", ee.getMojoExecution().getLifecyclePhase(), ee.getMojoExecution() );
+                        // logger.info( "### Phase is {} and mojo {} ", ee.getMojoExecution().getLifecyclePhase(), ee.getMojoExecution() );
 
                         if ( ! ee.getMojoExecution().getLifecyclePhase().equals( "clean" ) )
                         {
@@ -75,7 +79,7 @@ public class MetadataEventSpy extends AbstractEventSpy
                             logger.debug( "Activating metadata extension {} ", Utils.getManifestInformation() );
 
                             injector.createMetadata( ee.getSession() );
-                            injectedMetadata = true;
+                            injected.add( ee.getProject()  );
                         }
                     }
                 }
