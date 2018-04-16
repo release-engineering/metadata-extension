@@ -123,6 +123,15 @@
         <artifactId>lombok</artifactId>
         <version>1.16.18</version>
       </dependency>
+
+      <dependency>
+        <groupId>org.jboss.byteman</groupId>
+        <artifactId>byteman-download</artifactId>
+        <version>4.0.2</version>
+        <type>zip</type>
+        <classifier>bin</classifier>
+        <scope>test</scope>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -167,8 +176,11 @@
       <artifactId>commons-lang</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.projectlombok</groupId>
-      <artifactId>lombok</artifactId>
+      <groupId>org.jboss.byteman</groupId>
+      <artifactId>byteman-download</artifactId>
+      <type>zip</type>
+      <classifier>bin</classifier>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 
@@ -247,6 +259,19 @@
             <version>2.8</version>
             <executions>
               <execution>
+                <id>unpack-byteman</id>
+                <phase>pre-integration-test</phase>
+                <goals>
+                  <goal>unpack-dependencies</goal>
+                </goals>
+                <configuration>
+                  <includeArtifactIds>byteman-download</includeArtifactIds>
+                  <includeClassifiers>bin</includeClassifiers>
+                  <includeTypes>zip</includeTypes>
+                  <outputDirectory>${project.build.directory}</outputDirectory>
+                </configuration>
+              </execution>
+              <execution>
                 <id>unpack-maven</id>
                 <phase>pre-integration-test</phase>
                 <goals>
@@ -301,10 +326,12 @@
                     <goal>clean</goal>
                     <goal>package</goal>
                   </goals>
+                  <addTestClassPath>true</addTestClassPath>
                   <localRepositoryPath>${localRepositoryUrl}</localRepositoryPath>
                   <showVersion>true</showVersion>
                   <mavenHome>${it.maven.home}</mavenHome>
                   <!-- <mavenExecutable>mvnDebug</mavenExecutable> -->
+                  <filtering>true</filtering>
                   <filterProperties>
                     <pluginPropertyUsedForFiltering>localRepositoryPath</pluginPropertyUsedForFiltering>
                   </filterProperties>

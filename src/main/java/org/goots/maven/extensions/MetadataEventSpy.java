@@ -38,15 +38,12 @@ public class MetadataEventSpy extends AbstractEventSpy
 
     private final MetadataInjection injector;
 
-    private final ExceptionHolder exceptionHolder;
-
     private final HashSet<MavenProject> injected = new HashSet<>( );
 
     @Inject
-    public MetadataEventSpy(MetadataInjection injector, ExceptionHolder exceptionHolder)
+    public MetadataEventSpy(MetadataInjection injector)
     {
         this.injector = injector;
-        this.exceptionHolder = exceptionHolder;
     }
 
     @Override
@@ -57,45 +54,45 @@ public class MetadataEventSpy extends AbstractEventSpy
             return;
         }
 
-        try
+        if ( event instanceof ExecutionEvent )
         {
+            final ExecutionEvent ee = (ExecutionEvent) event;
+            final ExecutionEvent.Type type = ee.getType();
 
-            if ( event instanceof ExecutionEvent )
+            // Ideally we want to use SessionStarted or ProjectDiscoveryStarted but the Project Model has not
+            // been constructed. Anything after that (e.g. ProjectStarted) the Model has been constructed
+            // but the phases might not be available yet. Note that ee.getMojoExecution is only valid after
+            // MojoStarted phase.
+            if ( type != ExecutionEvent.Type.SessionStarted && type != ExecutionEvent.Type.ProjectDiscoveryStarted )
             {
-                final ExecutionEvent ee = (ExecutionEvent) event;
-                final ExecutionEvent.Type type = ee.getType();
-
-                // Ideally we want to use SessionStarted or ProjectDiscoveryStarted but the Project Model has not
-                // been constructed. Anything after that (e.g. ProjectStarted) the Model has been constructed
-                // but the phases might not be available yet. Note that ee.getMojoExecution is only valid after
-                // MojoStarted phase.
-                if ( type != ExecutionEvent.Type.SessionStarted &&
-                            type != ExecutionEvent.Type.ProjectDiscoveryStarted )
+                if ( ee.getSession() != null && ee.getMojoExecution() != null && !injected.contains( ee.getProject() ) )
                 {
-                    if ( ee.getSession() != null && ee.getMojoExecution() != null && !injected.contains( ee.getProject() ) )
+                    try
                     {
 //                        logger.info( "### Phase is {} and mojo {} ", ee.getMojoExecution().getLifecyclePhase(), ee.getMojoExecution() );
 
-                        if ( StringUtils.isNotBlank( ee.getMojoExecution().getLifecyclePhase() ) &&
-                                        ! "clean".equals( ee.getMojoExecution().getLifecyclePhase() ) )
+                        // Ensure we only run this once for each project once the clean* phases have completed.
+                        if ( StringUtils.isNotBlank( ee.getMojoExecution().getLifecyclePhase() ) && !ee.getMojoExecution().getLifecyclePhase().contains( "clean" ) )
                         {
                             logger.info( "Activating metadata extension" );
                             logger.debug( "Running metadata extension in phase {} ", ee.getMojoExecution().getLifecyclePhase() );
 
                             injector.createMetadata( ee.getSession() );
-                            injected.add( ee.getProject()  );
+                            injected.add( ee.getProject() );
                         }
+                    }
+                    catch ( final IOException e )
+                    {
+                        ee.getSession().getResult().addException( e );
+                        injected.add( ee.getProject() );
+                    }
+                    catch ( final RuntimeException e )
+                    {
+                        ee.getSession().getResult().addException( e );
+                        injected.add( ee.getProject() );
                     }
                 }
             }
-        }
-        catch ( final IOException e )
-        {
-            exceptionHolder.setException( e );
-        }
-        catch ( final RuntimeException e )
-        {
-            exceptionHolder.setException( e );
         }
     }
 

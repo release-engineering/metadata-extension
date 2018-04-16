@@ -13,19 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.goots.maven.extensions;
+package org.goots.maven.extensions.integrationtest.simplenumeric;
 
-import lombok.Getter;
-import lombok.Setter;
-
-import javax.inject.Named;
-import javax.inject.Singleton;
-
-@Named
-@Singleton
-public class ExceptionHolder
+/**
+ * Hello world!
+ *
+ */
+public class App
 {
-    @Getter
-    @Setter
-    Exception exception;
+    public static void main( String[] args )
+    {
+        System.out.println( "Hello World!" );
+    }
 }
