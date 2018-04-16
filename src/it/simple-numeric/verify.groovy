@@ -26,8 +26,11 @@ buildLog.eachLine {
    if (it.contains( "Activating metadata extension")) {
       message++
    }
+   if (it.contains( "Running metadata extension")) {
+      message++
+   }
 }
-assert message == 2
+assert message == 3
 
 // Verify metadata exists
 def metaFile = new File( basedir, 'target/classes/META-INF/build.metadata' )

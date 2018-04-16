@@ -15,6 +15,7 @@
  */
 package org.goots.maven.extensions;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.maven.eventspy.AbstractEventSpy;
 import org.apache.maven.execution.ExecutionEvent;
 import org.apache.maven.project.MavenProject;
@@ -25,7 +26,6 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.HashSet;
 
 @Named
@@ -38,12 +38,15 @@ public class MetadataEventSpy extends AbstractEventSpy
 
     private final MetadataInjection injector;
 
+    private final ExceptionHolder exceptionHolder;
+
     private final HashSet<MavenProject> injected = new HashSet<>( );
 
     @Inject
-    public MetadataEventSpy(MetadataInjection injector)
+    public MetadataEventSpy(MetadataInjection injector, ExceptionHolder exceptionHolder)
     {
         this.injector = injector;
+        this.exceptionHolder = exceptionHolder;
     }
 
     @Override
@@ -71,12 +74,13 @@ public class MetadataEventSpy extends AbstractEventSpy
                 {
                     if ( ee.getSession() != null && ee.getMojoExecution() != null && !injected.contains( ee.getProject() ) )
                     {
-                        // logger.info( "### Phase is {} and mojo {} ", ee.getMojoExecution().getLifecyclePhase(), ee.getMojoExecution() );
+//                        logger.info( "### Phase is {} and mojo {} ", ee.getMojoExecution().getLifecyclePhase(), ee.getMojoExecution() );
 
-                        if ( ! ee.getMojoExecution().getLifecyclePhase().equals( "clean" ) )
+                        if ( StringUtils.isNotBlank( ee.getMojoExecution().getLifecyclePhase() ) &&
+                                        ! "clean".equals( ee.getMojoExecution().getLifecyclePhase() ) )
                         {
                             logger.info( "Activating metadata extension" );
-                            logger.debug( "Activating metadata extension {} ", Utils.getManifestInformation() );
+                            logger.debug( "Running metadata extension in phase {} ", ee.getMojoExecution().getLifecyclePhase() );
 
                             injector.createMetadata( ee.getSession() );
                             injected.add( ee.getProject()  );
@@ -85,14 +89,13 @@ public class MetadataEventSpy extends AbstractEventSpy
                 }
             }
         }
-        // TODO: Consider failing the build if the extension fails...
         catch ( final IOException e )
         {
-            logger.error( "Extension failure", e );
+            exceptionHolder.setException( e );
         }
-        catch ( final Throwable e )
+        catch ( final RuntimeException e )
         {
-            logger.error( "Extension failure", e );
+            exceptionHolder.setException( e );
         }
     }
 
