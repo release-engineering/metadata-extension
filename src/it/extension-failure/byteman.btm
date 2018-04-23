@@ -1,5 +1,5 @@
 RULE eventspy
-CLASS org.goots.maven.extensions.MetadataInjection
+CLASS MetadataInjection
 METHOD recordMetadata
 IF TRUE
 DO System.out.println("*** Entering recordmetadata: "+ $0) ; throw new RuntimeException("Failed to record metadata")
