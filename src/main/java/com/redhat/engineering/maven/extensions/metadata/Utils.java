@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.goots.maven.extensions;
+package com.redhat.engineering.maven.extensions.metadata;
 
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.jgit.lib.ObjectId;
